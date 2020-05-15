@@ -26,8 +26,8 @@ namespace TestMiddleDB
         {
             new Task(() =>
             {
-                if(Console.ReadKey().Key == ConsoleKey.Escape)
-                cancelTokenSource.Cancel();
+                if (Console.ReadKey().Key == ConsoleKey.Escape)
+                    cancelTokenSource.Cancel();
             }).Start();
 
             Users = new List<User>();
@@ -35,26 +35,7 @@ namespace TestMiddleDB
             Console.WriteLine(loopResult.IsCompleted);
             if (loopResult.IsCompleted == true)
             {
-                foreach (User item in Users)
-                {
-                    using (ApplicationContext db = new ApplicationContext())
-                    {
-                        Console.WriteLine($"Name: {item.FIO}  Age: {item.Date}");
-                        FindUser = db.Users.Find(item.Identity);
-                        if (FindUser == null)
-                        {
-                            db.Users.Add(item);
-                            db.SaveChanges();
-                            Log(item);
-                        }
-                        if(FindUser != null && FindUser.Date > item.Date)
-                        {
-                            db.Users.Update(item);
-                            db.SaveChanges();
-                            Log(item);
-                        }
-                    }
-                }
+                ListToSQL();
             }
         }
 
@@ -65,7 +46,7 @@ namespace TestMiddleDB
 
         public static ParallelLoopResult ProcessFile(string path)
         {
-            ParallelLoopResult loopResult = Parallel.ForEach(File.ReadLines(path), 
+            ParallelLoopResult loopResult = Parallel.ForEach(File.ReadLines(path),
                 new ParallelOptions { CancellationToken = token }, line =>
             {
                 ReadString(line);
@@ -73,13 +54,37 @@ namespace TestMiddleDB
             return loopResult;
         }
 
-        public void Log(User user)
+        public void Log(User user, string Status)
         {
             using (StreamWriter w = File.AppendText("log.txt"))
             {
                 w.Write("\r\nLog Entry : ");
-                w.WriteLine($"Name: {user.FIO}  Age: {user.Date} City: {user.City}");
+                w.WriteLine($"ID: {user.Identity} Name: {user.FIO}  Age: {user.Date} City: {user.City} Status: {Status}");
                 w.WriteLine("-------------------------------");
+            }
+        }
+
+        public void ListToSQL()
+        {
+            foreach (User item in Users)
+            {
+                using (ApplicationContext db = new ApplicationContext())
+                {
+                    Console.WriteLine($"ID: {item.Identity} Name: {item.FIO}  Date: {item.Date} TotalCount: {Users.Count}");
+                    FindUser = db.Users.Find(item.Identity);
+                    if (FindUser == null)
+                    {
+                        db.Users.Add(item);
+                        db.SaveChanges();
+                        Log(item, "Add");
+                    }
+                    if (FindUser != null && FindUser.Date > item.Date)
+                    {
+                        db.Users.Update(item);
+                        db.SaveChanges();
+                        Log(item, "Update");
+                    }
+                }
             }
         }
     }
