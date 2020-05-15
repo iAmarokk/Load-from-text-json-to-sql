@@ -13,6 +13,9 @@ namespace TestMiddleDB
         public static List<User> Users;
         public User FindUser { get; set; }
 
+        public static CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
+        public static CancellationToken token = cancelTokenSource.Token;
+
         static void Main(string[] args)
         {
             Program program = new Program();
@@ -21,8 +24,11 @@ namespace TestMiddleDB
 
         public void Start()
         {
-            CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
-            CancellationToken token = cancelTokenSource.Token;
+            new Task(() =>
+            {
+                if(Console.ReadKey().Key == ConsoleKey.Escape)
+                cancelTokenSource.Cancel();
+            }).Start();
 
             Users = new List<User>();
             ParallelLoopResult loopResult = ProcessFile("user.json");
@@ -39,29 +45,42 @@ namespace TestMiddleDB
                         {
                             db.Users.Add(item);
                             db.SaveChanges();
+                            Log(item);
                         }
-                        if(FindUser.Date > item.Date)
+                        if(FindUser != null && FindUser.Date > item.Date)
                         {
                             db.Users.Update(item);
                             db.SaveChanges();
+                            Log(item);
                         }
                     }
                 }
             }
         }
 
-        public void ReadString(string json)
+        public static void ReadString(string json)
         {
             Users = JsonConvert.DeserializeObject<List<User>>(json);
         }
 
-        public ParallelLoopResult ProcessFile(string path)
+        public static ParallelLoopResult ProcessFile(string path)
         {
-            ParallelLoopResult loopResult = Parallel.ForEach(File.ReadLines(path), line =>
+            ParallelLoopResult loopResult = Parallel.ForEach(File.ReadLines(path), 
+                new ParallelOptions { CancellationToken = token }, line =>
             {
                 ReadString(line);
             });
             return loopResult;
+        }
+
+        public void Log(User user)
+        {
+            using (StreamWriter w = File.AppendText("log.txt"))
+            {
+                w.Write("\r\nLog Entry : ");
+                w.WriteLine($"Name: {user.FIO}  Age: {user.Date} City: {user.City}");
+                w.WriteLine("-------------------------------");
+            }
         }
     }
 }
