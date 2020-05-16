@@ -10,7 +10,7 @@ namespace TestMiddleDB
 {
     class Program
     {
-        public static List<User> Users;
+        public List<User> Users;
         public User FindUser { get; set; }
 
         public static CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
@@ -24,6 +24,9 @@ namespace TestMiddleDB
 
         public void Start()
         {
+            Console.WriteLine("Press Enter to Start, Press 'ESC' to cancel");
+            Console.ReadKey();
+
             new Task(() =>
             {
                 if (Console.ReadKey().Key == ConsoleKey.Escape)
@@ -39,12 +42,12 @@ namespace TestMiddleDB
             }
         }
 
-        public static void ReadString(string json)
+        public void ReadString(string json)
         {
             Users = JsonConvert.DeserializeObject<List<User>>(json);
         }
 
-        public static ParallelLoopResult ProcessFile(string path)
+        public ParallelLoopResult ProcessFile(string path)
         {
             ParallelLoopResult loopResult = Parallel.ForEach(File.ReadLines(path),
                 new ParallelOptions { CancellationToken = token }, line =>
@@ -83,6 +86,10 @@ namespace TestMiddleDB
                         db.Users.Update(item);
                         db.SaveChanges();
                         Log(item, "Update");
+                    }
+                    if(cancelTokenSource.IsCancellationRequested)
+                    {
+                        break;
                     }
                 }
             }
