@@ -73,7 +73,8 @@ namespace TestMiddleDB
             {
                 using (ApplicationContext db = new ApplicationContext())
                 {
-                    Console.WriteLine($"ID: {item.Identity} Name: {item.FIO}  Date: {item.Date} TotalCount: {Users.Count}");
+                    var Total = Users.Count - item.Identity;
+                    Console.WriteLine($"ID: {item.Identity} Name: {item.FIO}  Date: {item.Date} TotalCount: {Total}");
                     FindUser = db.Users.Find(item.Identity);
                     if (FindUser == null)
                     {
