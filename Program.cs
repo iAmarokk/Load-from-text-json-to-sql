@@ -12,6 +12,7 @@ namespace TestMiddleDB
     {
         public List<User> Users;
         public User FindUser { get; set; }
+        object sync = new object();
 
         public static CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
         public static CancellationToken token = cancelTokenSource.Token;
@@ -34,27 +35,17 @@ namespace TestMiddleDB
             }).Start();
 
             Users = new List<User>();
-            ParallelLoopResult loopResult = ProcessFile("user.json");
-            Console.WriteLine(loopResult.IsCompleted);
-            if (loopResult.IsCompleted == true)
+            ReadFileStream();
+            Parallel.ForEach(Users, new ParallelOptions { CancellationToken = token }, user =>
             {
-                ListToSQL();
-            }
+                ListToSQL(user);
+            });
+
         }
 
         public void ReadString(string json)
         {
             Users = JsonConvert.DeserializeObject<List<User>>(json);
-        }
-
-        public ParallelLoopResult ProcessFile(string path)
-        {
-            ParallelLoopResult loopResult = Parallel.ForEach(File.ReadLines(path),
-                new ParallelOptions { CancellationToken = token }, line =>
-            {
-                ReadString(line);
-            });
-            return loopResult;
         }
 
         public void Log(User user, string Status)
@@ -67,31 +58,38 @@ namespace TestMiddleDB
             }
         }
 
-        public void ListToSQL()
+        public void ListToSQL(User item)
         {
-            foreach (User item in Users)
+            using (ApplicationContext db = new ApplicationContext())
             {
-                using (ApplicationContext db = new ApplicationContext())
+                Console.WriteLine($"ID: {item.Identity} Name: {item.FIO}  Date: {item.Date}");
+                lock (sync)
                 {
-                    var Total = Users.Count - item.Identity;
-                    Console.WriteLine($"ID: {item.Identity} Name: {item.FIO}  Date: {item.Date} TotalCount: {Total}");
                     FindUser = db.Users.Find(item.Identity);
-                    if (FindUser == null)
-                    {
-                        db.Users.Add(item);
-                        db.SaveChanges();
-                        Log(item, "Add");
-                    }
                     if (FindUser != null && FindUser.Date > item.Date)
                     {
                         db.Users.Update(item);
                         db.SaveChanges();
                         Log(item, "Update");
                     }
-                    if(cancelTokenSource.IsCancellationRequested)
+                    if (FindUser == null)
                     {
-                        break;
+                        db.Users.Add(item);
+                        db.SaveChanges();
+                        Log(item, "Add");
                     }
+                }
+            }
+        }
+
+        public void ReadFileStream()
+        {
+            using (StreamReader sr = new StreamReader("user.json", System.Text.Encoding.Default))
+            {
+                string line;
+                while ((line = sr.ReadLine()) != null)
+                {
+                    ReadString(line);
                 }
             }
         }
