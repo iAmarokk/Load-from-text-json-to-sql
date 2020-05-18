@@ -42,12 +42,19 @@ namespace TestMiddleDB
             });
 
         }
-
+        /// <summary>
+        /// Десериализация строки в список users
+        /// </summary>
+        /// <param name="json"></param>
         public void ReadString(string json)
         {
             Users = JsonConvert.DeserializeObject<List<User>>(json);
         }
-
+        /// <summary>
+        /// Ведение лога в файл
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="Status"></param>
         public void Log(User user, string Status)
         {
             using (StreamWriter w = File.AppendText("log.txt"))
@@ -57,7 +64,10 @@ namespace TestMiddleDB
                 w.WriteLine("-------------------------------");
             }
         }
-
+        /// <summary>
+        /// Запись List в базу данных
+        /// </summary>
+        /// <param name="item"></param>
         public void ListToSQL(User item)
         {
             using (ApplicationContext db = new ApplicationContext())
@@ -81,7 +91,9 @@ namespace TestMiddleDB
                 }
             }
         }
-
+        /// <summary>
+        /// Чтение файла в строку и передача на десериализацию
+        /// </summary>
         public void ReadFileStream()
         {
             using (StreamReader sr = new StreamReader("user.json", System.Text.Encoding.Default))
